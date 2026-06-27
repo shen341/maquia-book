@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MAQUIA Book Flip</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page-ratio: 0.78125;
+      --book-height: min(82vh, 860px);
+      --page-width: calc(var(--book-height) * var(--page-ratio));
+      --book-width: calc(var(--page-width) * 2);
+      --surface: #171717;
+      --panel: rgba(24, 24, 24, .72);
+      --line: rgba(255, 255, 255, .14);
+      --text: #f5f0ea;
+      --muted: #bcb4aa;
+      --accent: #d6a65e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(214, 166, 94, .16), transparent 34%),
+        linear-gradient(135deg, #101010 0%, #25211d 48%, #0f1112 100%);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 14px;
+      padding: 18px clamp(14px, 3vw, 36px);
+    }
+
+    .toolbar,
+    .footer {
+      width: min(100%, 1080px);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, .18);
+    }
+
+    .brand {
+      min-width: 0;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      white-space: nowrap;
+    }
+
+    .brand strong {
+      font-size: 18px;
+      letter-spacing: .08em;
+    }
+
+    .brand span,
+    .counter {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button {
+      width: 40px;
+      height: 40px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .08);
+      color: var(--text);
+      cursor: pointer;
+      transition: transform .16s ease, background .16s ease, border-color .16s ease, opacity .16s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(214, 166, 94, .62);
+      background: rgba(214, 166, 94, .16);
+    }
+
+    button:disabled {
+      cursor: default;
+      opacity: .36;
+    }
+
+    button svg {
+      width: 21px;
+      height: 21px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .stage {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 0;
+      perspective: 2600px;
+    }
+
+    .book-shell {
+      width: var(--book-width);
+      height: var(--book-height);
+      max-width: calc(100vw - 112px);
+      max-height: calc(100vh - 160px);
+      aspect-ratio: 1.5625 / 1;
+      transform: scale(var(--zoom, 1));
+      transform-origin: center center;
+      transition: transform .2s ease;
+    }
+
+    .book {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      filter: drop-shadow(0 30px 44px rgba(0, 0, 0, .42));
+    }
+
+    .book::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 5px;
+      background:
+        linear-gradient(90deg, transparent calc(50% - 1px), rgba(0, 0, 0, .48) 50%, transparent calc(50% + 2px)),
+        linear-gradient(90deg, rgba(0, 0, 0, .18), transparent 8%, transparent 92%, rgba(0, 0, 0, .18));
+      pointer-events: none;
+      z-index: 2000;
+    }
+
+    .blank {
+      position: absolute;
+      top: 0;
+      width: 50%;
+      height: 100%;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .18);
+      background:
+        linear-gradient(115deg, #f4efe7 0%, #d8cec0 100%);
+    }
+
+    .blank.left {
+      left: 0;
+      border-radius: 5px 0 0 5px;
+    }
+
+    .blank.right {
+      right: 0;
+      border-radius: 0 5px 5px 0;
+    }
+
+    .leaf {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 50%;
+      height: 100%;
+      transform-origin: left center;
+      transform-style: preserve-3d;
+      transition: transform .82s cubic-bezier(.2, .74, .17, 1);
+      will-change: transform;
+    }
+
+    .leaf.flipped {
+      transform: rotateY(-180deg);
+    }
+
+    .page {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #eee8df;
+      backface-visibility: hidden;
+      border: 1px solid rgba(255, 255, 255, .18);
+      box-shadow: inset 0 0 22px rgba(0, 0, 0, .14);
+    }
+
+    .front {
+      border-radius: 0 5px 5px 0;
+    }
+
+    .back {
+      transform: rotateY(180deg);
+      border-radius: 5px 0 0 5px;
+    }
+
+    .page img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .page::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(90deg, rgba(0, 0, 0, .2), transparent 10%, transparent 92%, rgba(255, 255, 255, .08));
+      mix-blend-mode: multiply;
+    }
+
+    .side-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 64px;
+      background: rgba(17, 17, 17, .7);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+    }
+
+    .side-nav.prev {
+      left: clamp(12px, 3vw, 36px);
+    }
+
+    .side-nav.next {
+      right: clamp(12px, 3vw, 36px);
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    input[type="range"] {
+      width: min(24vw, 180px);
+      accent-color: var(--accent);
+    }
+
+    @media (max-width: 760px) {
+      :root {
+        --book-height: min(72vh, 680px);
+      }
+
+      .app {
+        padding: 12px;
+        gap: 10px;
+      }
+
+      .toolbar,
+      .footer {
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .book-shell {
+        max-width: calc(100vw - 32px);
+        max-height: calc(100vh - 210px);
+      }
+
+      .side-nav {
+        width: 42px;
+        height: 56px;
+      }
+
+      .hint {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="toolbar">
+      <div class="brand">
+        <strong>MAQUIA</strong>
+        <span>Book Flip</span>
+      </div>
+      <div class="controls" aria-label="页面控制">
+        <button id="firstBtn" type="button" title="第一页" aria-label="第一页">
+          <svg viewBox="0 0 24 24"><path d="M11 17l-5-5 5-5"/><path d="M18 17l-5-5 5-5"/></svg>
+        </button>
+        <button id="prevBtn" type="button" title="上一页" aria-label="上一页">
+          <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button id="nextBtn" type="button" title="下一页" aria-label="下一页">
+          <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <button id="lastBtn" type="button" title="最后一页" aria-label="最后一页">
+          <svg viewBox="0 0 24 24"><path d="M6 17l5-5-5-5"/><path d="M13 17l5-5-5-5"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="stage" aria-label="电子书">
+      <button class="side-nav prev" id="sidePrev" type="button" title="上一页" aria-label="上一页">
+        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="book-shell" id="bookShell">
+        <div class="book" id="book">
+          <div class="blank left"></div>
+          <div class="blank right"></div>
+        </div>
+      </div>
+      <button class="side-nav next" id="sideNext" type="button" title="下一页" aria-label="下一页">
+        <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </section>
+
+    <footer class="footer">
+      <span class="counter" id="counter">第 1 / 130 页</span>
+      <div class="controls" aria-label="缩放控制">
+        <button id="zoomOutBtn" type="button" title="缩小" aria-label="缩小">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6"/><path d="M16.5 16.5L21 21"/></svg>
+        </button>
+        <input id="zoomRange" type="range" min="70" max="150" value="100" aria-label="缩放比例">
+        <button id="zoomInBtn" type="button" title="放大" aria-label="放大">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M11 8v6"/><path d="M8 11h6"/><path d="M16.5 16.5L21 21"/></svg>
+        </button>
+        <button id="zoomResetBtn" type="button" title="重置缩放" aria-label="重置缩放">
+          <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/></svg>
+        </button>
+      </div>
+      <span class="hint">方向键翻页，+ / - 缩放</span>
+    </footer>
+  </main>
+
+  <script>
+    const TOTAL_PAGES = 130;
+    const TOTAL_LEAVES = Math.ceil(TOTAL_PAGES / 2);
+    const book = document.getElementById("book");
+    const bookShell = document.getElementById("bookShell");
+    const counter = document.getElementById("counter");
+    const zoomRange = document.getElementById("zoomRange");
+    const controls = {
+      first: document.getElementById("firstBtn"),
+      prev: document.getElementById("prevBtn"),
+      next: document.getElementById("nextBtn"),
+      last: document.getElementById("lastBtn"),
+      sidePrev: document.getElementById("sidePrev"),
+      sideNext: document.getElementById("sideNext"),
+      zoomOut: document.getElementById("zoomOutBtn"),
+      zoomIn: document.getElementById("zoomInBtn"),
+      zoomReset: document.getElementById("zoomResetBtn")
+    };
+
+    let currentLeaf = 0;
+    let zoom = 1;
+    const leaves = [];
+
+    function pageMarkup(pageNumber) {
+      if (pageNumber > TOTAL_PAGES) return "";
+      return `<img src="img/${pageNumber}.jpg" alt="第 ${pageNumber} 页" loading="${pageNumber <= 6 ? "eager" : "lazy"}">`;
+    }
+
+    function buildBook() {
+      for (let index = 0; index < TOTAL_LEAVES; index += 1) {
+        const frontPage = index * 2 + 1;
+        const backPage = frontPage + 1;
+        const leaf = document.createElement("article");
+        leaf.className = "leaf";
+        leaf.innerHTML = `
+          <div class="page front">${pageMarkup(frontPage)}</div>
+          <div class="page back">${pageMarkup(backPage)}</div>
+        `;
+        book.appendChild(leaf);
+        leaves.push(leaf);
+      }
+      updateBook(false);
+    }
+
+    function visiblePages() {
+      const left = currentLeaf * 2;
+      const right = left + 1;
+      if (left <= 0) return "第 1 / " + TOTAL_PAGES + " 页";
+      if (right > TOTAL_PAGES) return "第 " + left + " / " + TOTAL_PAGES + " 页";
+      return "第 " + left + "-" + right + " / " + TOTAL_PAGES + " 页";
+    }
+
+    function updateBook(animate = true) {
+      leaves.forEach((leaf, index) => {
+        if (!animate) leaf.style.transition = "none";
+        leaf.classList.toggle("flipped", index < currentLeaf);
+        leaf.style.zIndex = index < currentLeaf ? index + 1 : TOTAL_LEAVES - index;
+        if (!animate) {
+          leaf.offsetHeight;
+          leaf.style.transition = "";
+        }
+      });
+
+      counter.textContent = visiblePages();
+      const atStart = currentLeaf === 0;
+      const atEnd = currentLeaf === TOTAL_LEAVES;
+      controls.first.disabled = atStart;
+      controls.prev.disabled = atStart;
+      controls.sidePrev.disabled = atStart;
+      controls.next.disabled = atEnd;
+      controls.last.disabled = atEnd;
+      controls.sideNext.disabled = atEnd;
+      preloadAround();
+    }
+
+    function goToLeaf(leafIndex) {
+      const nextLeaf = Math.max(0, Math.min(TOTAL_LEAVES, leafIndex));
+      if (nextLeaf === currentLeaf) return;
+      currentLeaf = nextLeaf;
+      updateBook(true);
+    }
+
+    function nextPage() {
+      goToLeaf(currentLeaf + 1);
+    }
+
+    function prevPage() {
+      goToLeaf(currentLeaf - 1);
+    }
+
+    function setZoom(value) {
+      zoom = Math.max(.7, Math.min(1.5, value));
+      bookShell.style.setProperty("--zoom", zoom.toFixed(2));
+      zoomRange.value = Math.round(zoom * 100);
+    }
+
+    function preloadAround() {
+      const start = Math.max(1, currentLeaf * 2 - 2);
+      const end = Math.min(TOTAL_PAGES, currentLeaf * 2 + 7);
+      for (let page = start; page <= end; page += 1) {
+        const img = new Image();
+        img.src = "img/" + page + ".jpg";
+      }
+    }
+
+    controls.first.addEventListener("click", () => goToLeaf(0));
+    controls.prev.addEventListener("click", prevPage);
+    controls.sidePrev.addEventListener("click", prevPage);
+    controls.next.addEventListener("click", nextPage);
+    controls.sideNext.addEventListener("click", nextPage);
+    controls.last.addEventListener("click", () => goToLeaf(TOTAL_LEAVES));
+    controls.zoomOut.addEventListener("click", () => setZoom(zoom - .1));
+    controls.zoomIn.addEventListener("click", () => setZoom(zoom + .1));
+    controls.zoomReset.addEventListener("click", () => setZoom(1));
+    zoomRange.addEventListener("input", event => setZoom(Number(event.target.value) / 100));
+
+    book.addEventListener("click", event => {
+      const rect = book.getBoundingClientRect();
+      const isRight = event.clientX > rect.left + rect.width / 2;
+      isRight ? nextPage() : prevPage();
+    });
+
+    window.addEventListener("keydown", event => {
+      if (event.key === "ArrowRight") nextPage();
+      if (event.key === "ArrowLeft") prevPage();
+      if (event.key === "+" || event.key === "=") setZoom(zoom + .1);
+      if (event.key === "-" || event.key === "_") setZoom(zoom - .1);
+      if (event.key === "0") setZoom(1);
+    });
+
+    buildBook();
+    setZoom(1);
+  </script>
+</body>
+</html>
