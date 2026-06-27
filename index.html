@@ -259,6 +259,159 @@
       accent-color: var(--accent);
     }
 
+    .maquia-essence {
+      position: fixed;
+      right: clamp(14px, 2.4vw, 34px);
+      top: clamp(92px, 12vh, 128px);
+      width: min(312px, calc(100vw - 28px));
+      min-height: 52px;
+      z-index: 40;
+      color: #fff8ef;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 8px;
+      background:
+        linear-gradient(145deg, rgba(35, 29, 27, .92), rgba(19, 18, 18, .82)),
+        radial-gradient(circle at 12% 0%, rgba(214, 166, 94, .3), transparent 42%);
+      box-shadow: 0 22px 56px rgba(0, 0, 0, .34), 0 0 0 1px rgba(214, 166, 94, .06);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+      animation: essenceEnter .82s cubic-bezier(.2, .74, .17, 1) .3s both, essenceFloat 6s ease-in-out 1.3s infinite;
+    }
+
+    .maquia-essence::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, .12) 34%, transparent 58%);
+      transform: translateX(-110%);
+      animation: essenceSheen 7s ease-in-out 1.8s infinite;
+    }
+
+    .maquia-essence.is-collapsed {
+      width: 52px;
+    }
+
+    .maquia-essence.is-collapsed .essence-body {
+      display: none;
+    }
+
+    .essence-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 30px;
+      height: 30px;
+      z-index: 1;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .essence-body {
+      padding: 20px 18px 18px;
+    }
+
+    .essence-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0 38px 12px 0;
+      color: #f4c983;
+      font-size: 12px;
+      letter-spacing: .08em;
+    }
+
+    .essence-kicker::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #f4c983;
+      box-shadow: 0 0 14px rgba(244, 201, 131, .86);
+      animation: essencePulse 1.9s ease-in-out infinite;
+    }
+
+    .essence-title {
+      margin: 0 0 10px;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .essence-copy {
+      margin: 0;
+      color: rgba(255, 248, 239, .84);
+      font-size: 14px;
+      line-height: 1.78;
+    }
+
+    .essence-progress {
+      position: relative;
+      height: 2px;
+      margin-top: 16px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .14);
+    }
+
+    .essence-progress::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform-origin: left center;
+      background: linear-gradient(90deg, #f4c983, #fff0d4);
+      animation: essenceRead 20s linear infinite;
+    }
+
+    @keyframes essenceEnter {
+      from {
+        opacity: 0;
+        transform: translateX(28px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes essenceFloat {
+      0%, 100% {
+        margin-top: 0;
+      }
+      50% {
+        margin-top: -8px;
+      }
+    }
+
+    @keyframes essencePulse {
+      0%, 100% {
+        opacity: .62;
+        transform: scale(.78);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.18);
+      }
+    }
+
+    @keyframes essenceSheen {
+      0%, 58% {
+        transform: translateX(-110%);
+      }
+      76%, 100% {
+        transform: translateX(110%);
+      }
+    }
+
+    @keyframes essenceRead {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+
     @media (max-width: 760px) {
       :root {
         --book-height: min(72vh, 680px);
@@ -291,6 +444,37 @@
 
       .hint {
         display: none;
+      }
+
+      .maquia-essence {
+        top: auto;
+        right: 12px;
+        bottom: 82px;
+        transform: none;
+        animation: essenceMobileEnter .72s cubic-bezier(.2, .74, .17, 1) .25s both, essenceFloat 6s ease-in-out 1.2s infinite;
+      }
+
+      .essence-body {
+        padding: 16px 16px 15px;
+      }
+
+      .essence-title {
+        font-size: 16px;
+      }
+
+      .essence-copy {
+        font-size: 13px;
+      }
+    }
+
+    @keyframes essenceMobileEnter {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
       }
     }
   </style>
@@ -349,6 +533,16 @@
       </div>
       <span class="hint">方向键翻页，+ / - 缩放</span>
     </footer>
+
+    <aside class="maquia-essence" id="maquiaEssence" aria-label="本期精华动画与文字说明">
+      <button class="essence-toggle" id="essenceToggle" type="button" aria-label="收起本期精华" title="收起本期精华">×</button>
+      <div class="essence-body">
+        <p class="essence-kicker">20 秒本期精华</p>
+        <h2 class="essence-title">春夏美肌灵感速递</h2>
+        <p class="essence-copy">这一期 MAQUIA 把通透底妆、轻盈防晒与发光感护肤打包送到眼前：从可日常复制的妆容细节，到值得加入购物车的口碑单品，每一页都像在提醒你，把肌肤状态养亮一点，把心情也打磨得更精致。</p>
+        <div class="essence-progress" aria-hidden="true"></div>
+      </div>
+    </aside>
   </main>
 
   <script>
@@ -483,6 +677,15 @@
 
     buildBook();
     setZoom(1);
+
+    const essencePanel = document.getElementById("maquiaEssence");
+    const essenceToggle = document.getElementById("essenceToggle");
+    essenceToggle.addEventListener("click", () => {
+      const collapsed = essencePanel.classList.toggle("is-collapsed");
+      essenceToggle.textContent = collapsed ? "i" : "×";
+      essenceToggle.title = collapsed ? "展开本期精华" : "收起本期精华";
+      essenceToggle.setAttribute("aria-label", essenceToggle.title);
+    });
   </script>
 </body>
 </html>
